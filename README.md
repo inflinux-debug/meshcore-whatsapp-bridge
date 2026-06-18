@@ -36,6 +36,7 @@ Ponte que **recebe mensagens do rádio MeshCore via Bluetooth (BLE)** e as
 
 ```powershell
 cd meshcore-whatsapp-bridge
+$env:PUPPETEER_SKIP_DOWNLOAD = "true"   # usa o Chrome/Edge do sistema; evita o download bloqueado por antivírus
 npm install
 Copy-Item .env.example .env
 ```
