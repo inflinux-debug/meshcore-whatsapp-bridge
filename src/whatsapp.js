@@ -5,6 +5,25 @@ const fs = require('fs');
 const path = require('path');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const { spawn } = require('child_process');
+
+// Mata a arvore de processos do navegador no nivel do SO. O client.destroy() do
+// whatsapp-web.js so fecha o Chrome via CDP; quando a pagina trava ("Execution
+// context was destroyed"), o CDP nao responde e o navegador fica orfao segurando
+// o perfil em .wwebjs_auth. Usamos o PID que o puppeteer lancou como garantia.
+function killBrowserTree(pid) {
+  return new Promise((resolve) => {
+    if (!pid) return resolve();
+    if (process.platform === 'win32') {
+      const t = spawn('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+      t.on('exit', () => resolve());
+      t.on('error', () => resolve());
+    } else {
+      try { process.kill(pid, 'SIGKILL'); } catch (_) {}
+      resolve();
+    }
+  });
+}
 
 // Resolve o navegador a usar. Evita o download do Chromium do puppeteer
 // (que costuma ser bloqueado por antivirus no Windows) reutilizando o
@@ -94,7 +113,15 @@ class WhatsAppSender extends EventEmitter {
   }
 
   async stop() {
-    try { await this.client.destroy(); } catch (_) {}
+    // Captura o processo do navegador ANTES do destroy (depois some a referencia).
+    const proc = this.client?.pupBrowser?.process?.();
+    try {
+      await this.client.destroy();
+    } catch (_) {
+      // destroy via CDP pode falhar se a pagina travou — seguimos pro kill forcado.
+    }
+    // Rede de seguranca: se o Chrome nao morreu, mata a arvore dele no SO.
+    if (proc && proc.exitCode === null) await killBrowserTree(proc.pid);
   }
 }
 
