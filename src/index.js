@@ -103,9 +103,17 @@ async function main() {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
-  // Sobe os dois servicos
-  await wa.start();
-  await mesh.start();
+  // Sobe os dois servicos. Se algo falhar aqui (ex.: WhatsApp Web), encerra o
+  // navegador/BLE antes de propagar — senao o Chrome do puppeteer fica orfao
+  // segurando o perfil em .wwebjs_auth, e a proxima execucao colide nele.
+  try {
+    await wa.start();
+    await mesh.start();
+  } catch (err) {
+    await wa.stop().catch(() => {});
+    await mesh.stop().catch(() => {});
+    throw err;
+  }
   log('BRIDGE', 'Ponte ativa. Aguardando mensagens do MeshCore...');
 }
 
