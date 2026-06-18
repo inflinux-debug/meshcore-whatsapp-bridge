@@ -42,7 +42,7 @@ class WhatsAppSender extends EventEmitter {
     this._browserPath = executablePath;
 
     this.client = new Client({
-      authStrategy: new LocalAuth({ clientId: 'meshcore-bridge' }),
+      authStrategy: new LocalAuth({ clientId: 'meshcore-bridge2' }),
       puppeteer: {
         headless: true,
         executablePath, // usa Chrome/Edge do sistema; undefined = puppeteer decide
